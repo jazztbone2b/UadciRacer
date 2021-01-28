@@ -1,7 +1,7 @@
 // PROVIDED CODE BELOW (LINES 1 - 80) DO NOT REMOVE
 
 // The store will hold all information needed globally
-var store = {
+const store = {
 	track_id: undefined,
 	player_id: undefined,
 	race_id: undefined,
@@ -34,17 +34,23 @@ async function onPageLoad() {
 
 function setupClickHandlers() {
 	document.addEventListener('click', function(event) {
-		let parent = event.target.parentElement;
-		const { target } = event;
+		// let parent = event.target.parentElement;
+		let { target } = event;
 
 		// Race track form field
-		if(parent.matches('.card.track')){
-			handleSelectTrack(parent);
+		if(target.matches('.card.track')|| target.parentNode.matches('.card.track')){
+			if (target.parentNode.matches('.card.track')) { 
+				target = target.parentNode;
+			}
+			handleSelectTrack(target);
 		}
 		
 		// Pod racer form field
-		if(parent.matches('.card.podracer')){
-			handleSelectPodRacer(parent);
+		if(target.matches('.card.podracer') || target.parentNode.matches('.card.podracer')){
+			if (target.parentNode.matches('.card.podracer')) { 
+				target = target.parentNode;
+		   	}
+			handleSelectPodRacer(target);
 		}
 
 		// Submit create race form
@@ -79,6 +85,12 @@ async function handleCreateRace() {
 	const player_id = store.player_id;
 	const track_id = store.track_id;
 	
+	// Validate that both the racer and track is selected
+	if (!player_id || !track_id) {
+		alert('You must select a track and a racer before starting the race.');
+		return;
+	}
+
 	// invoke the API call to create the race, then save the result
 	try {
 		const race = await createRace(player_id, track_id);
@@ -94,14 +106,23 @@ async function handleCreateRace() {
 	}
 
 	// The race has been created, now start the countdown
-	// call the async function runCountdown
-	await runCountdown();
+	try {
+		const gasPeddleBtn = document.getElementById('gas-peddle');
 
-	// call the async function startRace
-	await startRace(store.race_id);
+		// call the async function runCountdown
+		await runCountdown(gasPeddleBtn);
 
-	// call the async function runRace
-	await runRace(store.race_id);
+		// call the async function startRace
+		await startRace(store.race_id);
+
+		// after the race starts, enable the gas peddle button
+		gasPeddleBtn.disabled = false;
+
+		// call the async function runRace
+		await runRace(store.race_id);
+	} catch (err) {
+		console.log('An unexpected error occurred when trying to create the race. Err:', err);
+	}
 }
 
 function runRace(raceID) {
@@ -128,8 +149,9 @@ function runRace(raceID) {
 	});
 }
 
-async function runCountdown() {
+async function runCountdown(gasPeddleBtn) {
 	try {
+		gasPeddleBtn.disabled = true;
 		// wait for the DOM to load
 		await delay(1000);
 		let timer = 3;
